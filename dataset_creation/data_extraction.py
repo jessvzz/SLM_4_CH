@@ -9,13 +9,13 @@ load_dotenv()
 KEY = os.environ.get("EUROPEANA_API_KEY")
 
 if not KEY:
-    raise ValueError("Variable EUROPEANA_API_KEY is not set in the environment.")
+    raise ValueError("Vaariable EUROPEANA_API_KEY is not set in the environment.")
 
 URL = "https://api.europeana.eu/record/v2/search.json"
 PARAMS = {
     "query": "*",
     "wskey": KEY,
-    "rows": 10,  # max for request
+    "rows": 100,  # max for request
     "reusability": "open", # could use also restricted, would have to look more into it
     "media": "true",
     "profile": "rich"
