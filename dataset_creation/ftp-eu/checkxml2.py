@@ -13,34 +13,46 @@ NS = {
     "ore": "http://www.openarchives.org/ore/terms/"
 }
 
-# ---------------------------
+XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
+
 # HELPERS
-# ---------------------------
 def extract_text(elements, preferred_lang="en"):
     for el in elements:
-        lang = el.attrib.get("{http://www.w3.org/XML/1998/namespace}lang")
-        if lang == preferred_lang:
-            return {"value": el.text, "lang": lang}
+        if el.attrib.get(XML_LANG) == preferred_lang and el.text:
+            return {"value": el.text.strip(), "lang": preferred_lang}
 
-    if elements:
-        el = elements[0]
-        return {
-            "value": el.text,
-            "lang": el.attrib.get("{http://www.w3.org/XML/1998/namespace}lang")
-        }
+    for el in elements:
+        if el.text:
+            return {
+                "value": el.text.strip(),
+                "lang": el.attrib.get(XML_LANG)
+            }
 
     return None
 
 
+def extract_all_text(elements, preferred_lang="en"):
+    """Return list of texts, English first, then others."""
+    texts = []
+
+    for el in elements:
+        if el.attrib.get(XML_LANG) == preferred_lang and el.text:
+            texts.append(el.text.strip())
+
+    for el in elements:
+        if el.text and el.text.strip() not in texts:
+            texts.append(el.text.strip())
+
+    return texts
+
 def parse_xml_file(xml_path):
     tree = etree.parse(xml_path)
-
-    proxies = tree.xpath("//ore:Proxy", namespaces=NS)
 
     provider_proxy = None
     europeana_proxy = None
 
-    for p in proxies:
+    for p in tree.xpath("//ore:Proxy", namespaces=NS):
+
         flag = p.xpath("edm:europeanaProxy/text()", namespaces=NS)
         if flag:
             if flag[0] == "false":
@@ -56,13 +68,43 @@ def parse_xml_file(xml_path):
         provider_proxy.xpath("dc:title", namespaces=NS)
     )
 
-    description = extract_text(
-        provider_proxy.xpath("dc:description", namespaces=NS)
+    description_parts = []
+
+    subjects = extract_all_text(
+        provider_proxy.xpath("dc:subject", namespaces=NS)
     )
+    if subjects:
+        description_parts.append("Subjects: " + "; ".join(subjects))
 
-    # -------- PLACES (EN) --------
-    uri_to_label_en = {}
+    toc = extract_all_text(
+        provider_proxy.xpath("dcterms:tableOfContents", namespaces=NS)
+    )
+    if toc:
+        description_parts.append("Contents: " + " ".join(toc))
+    creator = extract_all_text(
+        provider_proxy.xpath("dc:creator", namespaces=NS)
+    )
+    if creator:
+        description_parts.append("Creator: " + ", ".join(creator))
 
+    publisher = extract_all_text(
+        provider_proxy.xpath("dc:publisher", namespaces=NS)
+    )
+    if publisher:
+        description_parts.append("Publisher: " + ", ".join(publisher))
+    
+    issued = extract_all_text(
+        provider_proxy.xpath("dcterms:issued", namespaces=NS)
+    )
+    if issued:
+        description_parts.append("Year: " + ", ".join(issued))
+
+    description = " ".join(description_parts) if description_parts else None
+
+    countries = tree.xpath("//edm:country/text()", namespaces=NS)
+    countries = [c.strip() for c in countries if c.strip()]
+
+    places = []
     for place in tree.xpath("//edm:Place", namespaces=NS):
         uri = place.attrib.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}about")
         label_en = place.xpath(
@@ -70,34 +112,37 @@ def parse_xml_file(xml_path):
             namespaces=NS
         )
         if label_en:
-            uri_to_label_en[uri] = label_en[0]
+            places.append(label_en[0])
 
-    places = []
 
-    if europeana_proxy is not None:
-        for p in europeana_proxy.xpath("dcterms:spatial", namespaces=NS):
-            uri = p.attrib.get("{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource")
-            if uri in uri_to_label_en:
-                places.append(uri_to_label_en[uri])
+    geo = []
+    geo.extend(countries)
+    geo.extend(places)
+
+    geo = list(dict.fromkeys(geo))
 
     needs_translation = (
         (title and title["lang"] != "en") or
         (description and description["lang"] != "en")
     )
 
+
     return {
         "title": title,
         "description": description,
-        "places": places,
+        "places": geo,
         "needs_translation": needs_translation
     }
 
-# ---------------------------
-# BATCH PIPELINE
-# ---------------------------
-INPUT_DIR = Path("data3/xml")
-OUTPUT_DIR = Path("data3/json")
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+#PIPLINE FOR BATCH PROCESSING
+BASE_DIR = Path(__file__).resolve().parent
+INPUT_DIR = BASE_DIR / "data6" / "xml"
+OUTPUT_DIR = BASE_DIR / "data6" / "json"
+
+
+print("INPUT_DIR exists:", INPUT_DIR.exists())
+print("XML files found:", list(INPUT_DIR.glob("*.xml")))
+
 
 all_records = []
 errors = []

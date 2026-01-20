@@ -1,73 +1,91 @@
 import json
-import sys
-from deep_translator import GoogleTranslator
+import torch
+from tqdm import tqdm
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
-translator = GoogleTranslator(source='el', target='en')
+MODEL_NAME = "facebook/nllb-200-distilled-600M"
+DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
 
-def safe_translate(text):
-    if not text or not isinstance(text, str):
-        return text
-    try:
-        return translator.translate(text)
-    except Exception as e:
-        print(f"Translation error: {e}")
-        return text
+TARGET_LANG = "eng_Latn"
+BATCH_SIZE = 8
+
+# MODEL LOADING
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to(DEVICE)
+model.eval()
+
+# TRANSLATION FUNCTION
+
+def translate_texts(texts, src_lang):
+    tokenizer.src_lang = src_lang
+
+    inputs = tokenizer(
+        texts,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=512
+    ).to(DEVICE)
+
+    forced_bos_token_id = tokenizer.convert_tokens_to_ids(TARGET_LANG)
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            forced_bos_token_id=forced_bos_token_id,
+            max_length=512
+        )
+
+    return tokenizer.batch_decode(outputs, skip_special_tokens=True)
+
+# Data loading and translation
+
+with open("data6/json/europeana_dataset.json", "r", encoding="utf-8") as f:
+    data = json.load(f)
 
 
-def json_to_jsonl(input_json, output_jsonl):
-    print("Starting translation pipeline...")
+for record in tqdm(data):
 
-    try:
-        with open(input_json, "r", encoding="utf-8") as f:
-            dataset = json.load(f)
-        print(f"Input file loaded. {len(dataset)} records found")
-    except Exception as e:
-        print(f"Failed to load input file: {e}")
-        sys.exit(1)
+    title = record.get("title")
+    if title and title.get("value"):
+        lang = title.get("lang")
 
-    success = 0
-    failed = 0
+    if lang is None:
+        src_lang = "lat_Latn"
+    elif lang.startswith("de"):
+        src_lang = "deu_Latn"
+    elif lang.startswith("la"):
+        src_lang = "lat_Latn"
+    else:
+        src_lang = "lat_Latn"
 
-    with open(output_jsonl, "w", encoding="utf-8") as out:
-        for idx, data in enumerate(dataset, 1):
-            print(f" - Processing record {idx}/{len(dataset)}")
-
+        if lang != "en":
             try:
-                title = data.get("title", {}).get("value", "")
-                description = data.get("description", {}).get("value", "")
+                translated = translate_texts(
+                    [title["value"]],
+                    src_lang=src_lang
+                )[0]
 
-                if data.get("needs_translation", False):
-                    title = safe_translate(title)
-                    description = safe_translate(description)
-                    print("Translation completed")
-                else:
-                    print("Translation not required")
-
-                places = data.get("places", [])
-                location_text = ""
-                if places:
-                    location_text = f" Located in {', '.join(places)}."
-
-                jsonl_obj = {
-                    "id": title,
-                    "category": "Cultural",
-                    "states": places[-1] if places else "",
-                    "text": f"{description}{location_text}".strip()
-                }
-
-                out.write(json.dumps(jsonl_obj, ensure_ascii=False) + "\n")
-                success += 1
-                print("Record written successfully\n")
-
+                record["title_en"] = translated
             except Exception as e:
-                failed += 1
-                print(f"Error processing record {idx}: {e}\n")
+                record["title_en"] = None
+        else:
+            record["title_en"] = title["value"]
 
-    print("Translation pipeline finished!")
-    print(f"Successful records: {success}")
-    print(f"Failed records: {failed}")
-    print(f"Output written to: {output_jsonl}")
+    desc = record.get("description")
+    if desc:
+        try:
+            translated = translate_texts(
+                [desc],
+                src_lang="deu_Latn"
+            )[0]
+            record["description_en"] = translated
+        except Exception:
+            record["description_en"] = None
 
+# SAVE
+with open("data6/json/europeana_dataset_en.json", "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
 
-if __name__ == "__main__":
-    json_to_jsonl("data3/json/europeana_dataset.json", "dataset.jsonl")
+print("Translation completed.")
