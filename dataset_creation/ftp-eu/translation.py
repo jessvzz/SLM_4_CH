@@ -19,7 +19,9 @@ model.eval()
 
 def translate_texts(texts, src_lang):
     tokenizer.src_lang = src_lang
-
+    if not texts:
+        return []
+    
     inputs = tokenizer(
         texts,
         return_tensors="pt",
@@ -41,48 +43,41 @@ def translate_texts(texts, src_lang):
 
 # Data loading and translation
 
-with open("data6/json/europeana_dataset.json", "r", encoding="utf-8") as f:
+with open("data6/json/europeana_dataset_lang_detected.json", "r", encoding="utf-8") as f:
     data = json.load(f)
 
 
 for record in tqdm(data):
 
-    title = record.get("title")
-    if title and title.get("value"):
-        lang = title.get("lang")
+    title = record.get("title", {})
+    title_text = title.get("value", "")
+    title_lang_nllb = record.get("title_lang_nllb")
 
-    if lang is None:
-        src_lang = "lat_Latn"
-    elif lang.startswith("de"):
-        src_lang = "deu_Latn"
-    elif lang.startswith("la"):
-        src_lang = "lat_Latn"
-    else:
-        src_lang = "lat_Latn"
-
-        if lang != "en":
-            try:
-                translated = translate_texts(
-                    [title["value"]],
-                    src_lang=src_lang
-                )[0]
-
-                record["title_en"] = translated
-            except Exception as e:
-                record["title_en"] = None
-        else:
-            record["title_en"] = title["value"]
-
-    desc = record.get("description")
-    if desc:
+    if title_text and title_lang_nllb != TARGET_LANG:
         try:
-            translated = translate_texts(
-                [desc],
-                src_lang="deu_Latn"
+            record["title_en"] = translate_texts(
+                [title_text],
+                src_lang=title_lang_nllb
             )[0]
-            record["description_en"] = translated
+        except Exception:
+            record["title_en"] = None
+    else:
+        record["title_en"] = title_text
+
+
+    desc_text = record.get("description", "")
+    desc_lang_nllb = record.get("description_lang_nllb")
+
+    if desc_text and desc_lang_nllb != TARGET_LANG:
+        try:
+            record["description_en"] = translate_texts(
+                [desc_text],
+                src_lang=desc_lang_nllb
+            )[0]
         except Exception:
             record["description_en"] = None
+    else:
+        record["description_en"] = desc_text
 
 # SAVE
 with open("data6/json/europeana_dataset_en.json", "w", encoding="utf-8") as f:
