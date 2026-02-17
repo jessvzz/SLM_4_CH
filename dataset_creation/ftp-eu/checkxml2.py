@@ -152,29 +152,21 @@ def parse_xml_file(xml_path):
 #PIPLINE FOR BATCH PROCESSING
 
 # "C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistral
-ZIP_DIR = Path(r"C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistrale")
+#ZIP_DIR = Path(r"C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistrale")
+
 BASE_DIR = Path(__file__).resolve().parent
+ZIP_DIR = BASE_DIR / "data6" / "6.zip"
 INPUT_DIR = BASE_DIR / "dataInput" / "json"
 OUTPUT_DIR = BASE_DIR / "dataOutput" / "json"
 
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-DATASET_FILE = OUTPUT_DIR / "europeana_dataset.json"
-ERRORS_FILE = OUTPUT_DIR / "errors.json"
+DATASET_FILE = OUTPUT_DIR / "europeana_dataset.jsonl"
+ERRORS_FILE = OUTPUT_DIR / "errors.jsonl"
 PROCESSED_DIRS_FILE = OUTPUT_DIR / "processed_directories.txt"
 
-if DATASET_FILE.exists():
-    with open(DATASET_FILE, "r", encoding="utf-8") as f:
-        all_records_global = json.load(f)
-else:
-    all_records_global = []
 
-if ERRORS_FILE.exists():
-    with open(ERRORS_FILE, "r", encoding="utf-8") as f:
-        errors_global = json.load(f)
-else:
-    errors_global = []
 
 processed_dirs = set()
 if PROCESSED_DIRS_FILE.exists():
@@ -201,41 +193,34 @@ for subdirectory in INPUT_DIR.iterdir():
         continue
 
     print(f"Processing directory: {subdirectory.name}")
+    with open(DATASET_FILE, "a", encoding="utf-8") as f_out, \
+         open(ERRORS_FILE, "a", encoding="utf-8") as f_err:
+        
+        count_local = 0
+        for xml_file in subdirectory.glob("*.xml"):
+            try:
+                record = parse_xml_file(xml_file)
+                record["id"] = xml_file.stem
+                record["source_dir"] = subdirectory.name
+                
+                f_out.write(json.dumps(record, ensure_ascii=False) + "\n")
+                count_local += 1
+                
+            except Exception as e:
+                error_log = {
+                    "directory": subdirectory.name,
+                    "file": xml_file.name,
+                    "error": str(e)
+                }
+                f_err.write(json.dumps(error_log, ensure_ascii=False) + "\n")
+                print(f"  Error: {xml_file.name}")
 
-    local_records = []
-    local_errors = []
+    with open(PROCESSED_DIRS_FILE, "a", encoding="utf-8") as f_prog:
+        f_prog.write(subdirectory.name + "\n")
 
-    for xml_file in subdirectory.glob("*.xml"):
-        try:
-            record = parse_xml_file(xml_file)
-            record["id"] = xml_file.stem
-            local_records.append(record)
-            print(f"  Processed: {xml_file.name}")
-
-        except Exception as e:
-            local_errors.append({
-                "directory": subdirectory.name,
-                "file": xml_file.name,
-                "error": str(e)
-            })
-            print(f"  Error: {xml_file.name}")
-
-    all_records_global.extend(local_records)
-    errors_global.extend(local_errors)
-
-
-    with open(PROCESSED_DIRS_FILE, "a", encoding="utf-8") as f:
-        f.write(subdirectory.name + "\n")
     processed_dirs.add(subdirectory.name)
+    print(f"  Completed: {subdirectory.name} ({count_local} records)")
 
-    print(f"  {len(local_records)} records added")
 
-with open(DATASET_FILE, "w", encoding="utf-8") as f:
-    json.dump(all_records_global, f, ensure_ascii=False, indent=2)
-
-with open(ERRORS_FILE, "w", encoding="utf-8") as f:
-    json.dump(errors_global, f, ensure_ascii=False, indent=2)
 
 print("Processing complete.")
-print(f"Total records: {len(all_records_global)}")
-print(f"Total errors: {len(errors_global)}")
