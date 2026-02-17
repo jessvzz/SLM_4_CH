@@ -152,7 +152,7 @@ def parse_xml_file(xml_path):
 #PIPLINE FOR BATCH PROCESSING
 
 # "C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistral
-ZIP_DIR = Path(r"C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\prova")
+ZIP_DIR = Path(r"C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistrale")
 BASE_DIR = Path(__file__).resolve().parent
 INPUT_DIR = BASE_DIR / "dataInput" / "json"
 OUTPUT_DIR = BASE_DIR / "dataOutput" / "json"
@@ -185,12 +185,12 @@ if PROCESSED_DIRS_FILE.exists():
 print("ZIP_DIR exists:", ZIP_DIR.exists())
 print("ZIP files found:", list(ZIP_DIR.glob("*.zip")))
 
-for zip_file in ZIP_DIR.glob("*.zip"):
+"""for zip_file in ZIP_DIR.glob("*.zip"):
     try:
         extract_zip(zip_file, INPUT_DIR)
-        print(f"Extracted: {zip_file.name}")
+        #print(f"Extracted: {zip_file.name}")
     except Exception as e:
-        print(f"Error extracting {zip_file.name}: {e}")
+        #print(f"Error extracting {zip_file.name}: {e}")"""
 
 for subdirectory in INPUT_DIR.iterdir():
     if not subdirectory.is_dir():
