@@ -8,3 +8,7 @@ __pycache__/
 **/dataset.jsonl
 **/lid.176.bin
 **/dataInput
+**/dataOutput
+**/data
+**/test
+**/dataset_final.jsonl

@@ -8,8 +8,11 @@ from transformers import MarianMTModel, MarianTokenizer
 DetectorFactory.seed = 0
 
 MODEL_NAME = "Helsinki-NLP/opus-mt-mul-en"
-INPUT = "test/test.jsonl"
-OUTPUT = "test/out.jsonl"
+#INPUT = "test/test.jsonl"
+#OUTPUT = "test/out.jsonl"
+
+INPUT = "dataset_final.jsonl"
+OUTPUT = "data/dataset_english.jsonl"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {DEVICE}")
@@ -58,25 +61,28 @@ def translate(text):
 
     return ". ".join(translated_sentences)
 
+i = 0
+with open(INPUT, "r", encoding="utf-8") as infile, \
+        open(OUTPUT, "w", encoding="utf-8") as outfile, \
+        open("data/translation_log.txt", "w", encoding="utf-8") as log_file:
 
-with open(INPUT, "r", encoding="utf-8") as f:
-    data = [json.loads(line) for line in f]
+        for line in tqdm(infile):
+            i = i + 1
+            record = json.loads(line)
+            title = record.get("title", "")
+            description = record.get("description", "")
 
-print(f"Loaded {len(data)} records. Beginning translation...")
+            if title:
+                record["title"] = translate(title)
+                record["title_og"] = title
+            if description:
+                record["description"] = translate(description)
+                record["description_og"] = description  
 
-for rec in tqdm(data):
-
-    title = rec.get("title", "")
-    if title:
-        rec["title_en"] = translate(title)
-
-    desc = rec.get("description", "")
-    if desc:
-        rec["description_en"] = translate(desc)
-
-
-with open(OUTPUT, "w", encoding="utf-8") as f:
-    for record in data:
-        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            outfile.write(json.dumps(record, ensure_ascii=False) + "\n")
+            outfile.flush()
+            log_file.write(f"{i}\n")
+            log_file.flush()    
+    
 
 print("Translation completed.")

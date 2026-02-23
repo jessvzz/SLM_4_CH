@@ -1,0 +1,15 @@
+from pathlib import Path
+import shutil
+import zipfile
+
+BASE_DIR = Path(__file__).resolve().parent
+INPUT_DIR = BASE_DIR / "dataInput" / "json"
+
+i =0 
+for directory in INPUT_DIR.iterdir():
+    try:
+        if directory.is_dir():
+           i += 1
+    except Exception as e:
+        print(f"Error processing {directory.name}: {e}")
+print(f"Total directories found: {i}")
