@@ -152,10 +152,10 @@ def parse_xml_file(xml_path):
 #PIPLINE FOR BATCH PROCESSING
 
 # "C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistral
-#ZIP_DIR = Path(r"C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistrale")
+ZIP_DIR = Path(r"C:\Users\Utente\OneDrive - Università degli Studi dell'Aquila\TesiMagistrale")
 
 BASE_DIR = Path(__file__).resolve().parent
-ZIP_DIR = BASE_DIR / "data6" / "6.zip"
+#ZIP_DIR = BASE_DIR / "data6" / "6.zip"
 INPUT_DIR = BASE_DIR / "dataInput" / "json"
 OUTPUT_DIR = BASE_DIR / "dataOutput" / "json"
 
