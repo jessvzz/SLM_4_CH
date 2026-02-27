@@ -62,12 +62,15 @@ def translate(text):
     return ". ".join(translated_sentences)
 
 i = 0
+START_FROM = 223473
 with open(INPUT, "r", encoding="utf-8") as infile, \
-        open(OUTPUT, "w", encoding="utf-8") as outfile, \
-        open("data/translation_log.txt", "w", encoding="utf-8") as log_file:
+        open(OUTPUT, "a", encoding="utf-8") as outfile, \
+        open("data/translation_log.txt", "a", encoding="utf-8") as log_file:
 
         for line in tqdm(infile):
             i = i + 1
+            if i < START_FROM:
+                continue
             record = json.loads(line)
             title = record.get("title", "")
             description = record.get("description", "")
