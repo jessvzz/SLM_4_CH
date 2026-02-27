@@ -13,9 +13,13 @@ MODEL_NAME = "Helsinki-NLP/opus-mt-mul-en"
 #OUTPUT = "test/out.jsonl"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-INPUT = os.path.join(BASE_DIR, "dataset_final.jsonl")
-OUTPUT = os.path.join(BASE_DIR, "data", "dataset_english.jsonl")
+DATA_DIR = os.path.join(BASE_DIR, "data")
 
+os.makedirs(DATA_DIR, exist_ok=True)
+
+INPUT = os.path.join(BASE_DIR, "dataset_final.jsonl")
+OUTPUT = os.path.join(DATA_DIR, "dataset_english.jsonl")
+LOG_PATH = os.path.join(DATA_DIR, "translation_log.txt")
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {DEVICE}")
@@ -67,8 +71,8 @@ def translate(text):
 i = 0
 START_FROM = 223473
 with open(INPUT, "r", encoding="utf-8") as infile, \
-        open(OUTPUT, "a", encoding="utf-8") as outfile, \
-        open("data/translation_log.txt", "a", encoding="utf-8") as log_file:
+     open(OUTPUT, "a", encoding="utf-8") as outfile, \
+     open(LOG_PATH, "a", encoding="utf-8") as log_file:
 
         for line in tqdm(infile):
             i = i + 1
