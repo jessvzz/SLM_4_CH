@@ -4,6 +4,7 @@ import torch
 from tqdm import tqdm
 from langdetect import detect, DetectorFactory
 from transformers import MarianMTModel, MarianTokenizer
+import os
 
 DetectorFactory.seed = 0
 
@@ -11,8 +12,10 @@ MODEL_NAME = "Helsinki-NLP/opus-mt-mul-en"
 #INPUT = "test/test.jsonl"
 #OUTPUT = "test/out.jsonl"
 
-INPUT = "dataset_final.jsonl"
-OUTPUT = "data/dataset_english.jsonl"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+INPUT = os.path.join(BASE_DIR, "dataset_final.jsonl")
+OUTPUT = os.path.join(BASE_DIR, "data", "dataset_english.jsonl")
+
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {DEVICE}")
