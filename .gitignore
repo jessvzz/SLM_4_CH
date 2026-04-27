@@ -5,10 +5,10 @@ __pycache__/
 **/data3/
 **/data6/
 .vscode/
-**/dataset.jsonl
 **/lid.176.bin
 **/dataInput
 **/dataOutput
 **/data
 **/test
-**/dataset_final.jsonl
+*.json
+*.jsonl
