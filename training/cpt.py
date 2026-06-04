@@ -1,7 +1,7 @@
 import torch
 from unsloth import FastLanguageModel
 from datasets import load_dataset
-from trl import SFTTrainer
+from trl import SFTTrainer, SFTConfig
 from transformers import TrainingArguments, DataCollatorForSeq2Seq
 import wandb  
 
@@ -33,7 +33,7 @@ MAX_STEPS = -1
 LR_MAX = 1e-4
 LR_MIN = 1e-5
 
-
+ 
 # LOAD MODEL
 
 print("Loading model...")
@@ -138,7 +138,7 @@ training_args = SFTConfig(
     # Report
     report_to="wandb", #to moinitor training
 
-    # SFT-specific params (moved from SFTTrainer)
+    # SFT-specific params
     dataset_text_field="text",
     max_length=MAX_SEQ_LENGTH,
     dataset_num_proc=2,
@@ -162,7 +162,7 @@ print("Start training...")
 print(f"  GPU: {torch.cuda.get_device_name(0)}")
 print(f"  VRAM available: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
-trainer_stats = trainer.train()
+trainer_stats = trainer.train(resume_from_checkpoint=True)
 
 print(f"\nTraining compelte")
 print(f"  Time: {trainer_stats.metrics['train_runtime']:.0f}s")
